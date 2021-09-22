@@ -8,9 +8,9 @@
 
 
 This Telegram bot is provided by lemon.markets to showcase one of the many use-cases of the API. This bot can be used to place trades on your own lemon.markets
-account and gain an overview of your portfolio. The available commands are: `/start`, `/cancel`, `/portfolio` and `/moon`. 
+account and gain an overview of your portfolio. The available commands are: `/start`, `/trade`, `/quicktrade`, `/portfolio` and `/moon`. 
 
-If you'd like a step-by-step tutorial on this project, check out our YouTube video [here](https://www.youtube.com/watch?v=md64kPfxKg8) and our blog-post [here]().
+If you'd like a step-by-step tutorial on this project, check out our YouTube video [here](https://www.youtube.com/watch?v=md64kPfxKg8) and our blog-post [here](https://medium.com/lemon-markets/setting-up-your-own-telegram-bot-to-trade-with-the-lemon-markets-api-part-1-of-2-98d7153bd5f6).
 
 ## 🛠️ Getting Set-Up
 
@@ -30,7 +30,7 @@ to find out how.
 
 ## 🤝 Contributing
 
-1. Fork the repository [llimona/telegram-bot](https://github.com/llimona/telegram-bot)
+1. Fork the repository
 2. Create your feature branch (git checkout -b new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin new-feature)
