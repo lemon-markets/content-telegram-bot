@@ -7,7 +7,8 @@ from helpers import RequestHandler
 class Instrument(RequestHandler):
 
     def get_titles(self, search_query: str, instrument_type: str):
-        endpoint = f'instruments/?search={search_query}&type={instrument_type}'
+        mic = os.getenv("MIC")
+        endpoint = f'instruments/?search={search_query}&type={instrument_type}&mic={mic}'
         response = self.get_data_market(endpoint)
         results = response['results']
 
@@ -21,6 +22,13 @@ class Instrument(RequestHandler):
                 instruments[result['title']] = result['isin']
 
         return instruments
+
+    def get_title(self, isin: str):
+        mic = os.getenv("MIC")
+        endpoint = f'instruments/?isin={isin}&mic={mic}'
+        response = self.get_data_market(endpoint)
+
+        return response['results'][0]['title']
 
     def get_price(self, isin: str):
         mic = os.getenv("MIC")

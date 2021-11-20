@@ -26,7 +26,7 @@ class TradingBot:
         update.message.reply_text(
             'Hi! I\'m the Lemon Trader Bot! I can place trades for you using the lemon.markets API. '
             'Send /cancel to stop talking to me.\n\n'
-            'Please fill in your lemon.markets client ID.',
+            'Please fill in your lemon.markets API key.',
         )
 
         print("Conversation started.")
@@ -48,27 +48,16 @@ class TradingBot:
         print(context.user_data)
 
         try:
-            authentication = Token().authenticate(context.user_data['client_id'], context.user_data['client_secret'])
-
-            # if credentials not correct, prompt user to fill in client ID again
-            if 'access_token' not in authentication:
-                update.message.reply_text(
-                    'Authentication failed. Please fill in your client ID again.'
-                )
-                return TradingBot.ID
-
-            context.user_data['access_token'] = authentication.get('access_token')
-
             # if Trading Venue closed, indicate next opening time and end conversation
-            if not TradingVenue(context.user_data['access_token']).is_open():
-                opening_date: str = TradingVenue(context.user_data['access_token']).get_next_opening_day()
-                opening_time: str = TradingVenue(context.user_data['access_token']).get_next_opening_time()
+            if not TradingVenue().is_open():
+                opening_date: str = TradingVenue().get_next_opening_day()
+                opening_time: str = TradingVenue().get_next_opening_time()
                 update.message.reply_text(
                     f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
                 )
                 return ConversationHandler.END
 
-            context.user_data['space_uuid'] = Space(context.user_data['access_token']).get_space_uuid()
+            context.user_data['space_uuid'] = Space().get_space_uuid()
 
         except Exception as e:
             print(e)
@@ -165,10 +154,8 @@ class TradingBot:
         indicate quantity. """
         context.user_data['side'] = update.message.text.lower()
         try:
-            [context.user_data['bid'], context.user_data['ask']] = Instrument(context.user_data['access_token']).\
-                get_price(context.user_data['isin'])
-            context.user_data['balance'] = Space(context.user_data['access_token']).\
-                get_balance(context.user_data['space_uuid'])
+            [context.user_data['bid'], context.user_data['ask']] = Instrument().get_price(context.user_data['isin'])
+            context.user_data['balance'] = Space().get_balance(context.user_data['space_id'])
         except Exception as e:
             print(e)
             update.message.reply_text(
@@ -184,14 +171,14 @@ class TradingBot:
             )
         # if user chooses sell, retrieve how many shares owned
         else:
-            positions = Portfolio(context.user_data['access_token']).get_portfolio(context.user_data['space_uuid'], )
+            positions = Portfolio().get_portfolio(context.user_data['space_uuid'])
             # initialise shares owned to 0
             context.user_data['shares_owned'] = 0
 
             # if instrument in portfolio, update shares owned
-            for position in positions:
-                if position['instrument']['isin'] == context.user_data['isin']:
-                    context.user_data['shares_owned'] = position['quantity']
+            if context.user_data['isin'] in positions:
+                context.user_data['shares_owned'] = \
+                    positions[context.user_data['isin']][context.user_data['space_uuid']].get('quantity')
 
             update.message.reply_text(
                 f'This instrument can be sold for €{round(context.user_data["bid"], 2)}, you currently own '
@@ -301,9 +288,9 @@ class TradingBot:
                 'Please wait while we process your order.'
             )
             while True:
-                order_summary = Order(context.user_data['access_token']).get_order(
+                order_summary = Order().get_order(
 
-                    context.user_data['order_uuid'],
+                    context.user_data['order_id'],
                 )
                 if order_summary.get('status') == 'executed':
                     print('executed')
@@ -354,7 +341,7 @@ class TradingBot:
     def to_the_moon(self, update: Update, context: CallbackContext):
         """Randomly prints a meme stock."""
         try:
-            meme_stock = Instrument(context.user_data['access_token']).get_memes()
+            meme_stock = Instrument().get_memes()
         except Exception as e:
             print(e)
             update.message.reply_text(
@@ -368,16 +355,16 @@ class TradingBot:
     def show_portfolio(self, update: Update, context: CallbackContext):
         """Displays portfolio."""
         try:
-            portfolio = Portfolio(context.user_data['access_token']).get_portfolio(context.user_data['space_uuid'])
+            portfolio = Portfolio().get_portfolio(context.user_data['space_id'])
         except Exception as e:
             print(e)
             update.message.reply_text(
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        for i in range(len(portfolio)):
+        for isin in portfolio:
             update.message.reply_text(
-                f'Name: {portfolio[i]["instrument"]["title"]}\n'
-                f'Quantity: {portfolio[i]["quantity"]}\n'
-                f'Average Price: €{portfolio[i]["average_price"]}'
+                f'Name: {Instrument().get_title(isin)}'
+                f'Quantity: {portfolio[isin][context.user_data["space_id"]]["quantity"]}\n'
+                f'Average Price: €{portfolio[isin][context.user_data["space_id"]]["buy_price_avg"]}'
             )

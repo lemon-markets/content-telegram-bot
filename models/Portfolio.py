@@ -3,8 +3,8 @@ from helpers import RequestHandler
 
 class Portfolio(RequestHandler):
 
-    def get_portfolio(self, space_uuid) -> list:
-        endpoint = f'spaces/{space_uuid}/portfolio/'
+    def get_portfolio(self, space_id: str) -> list:
+        endpoint = f'portfolio?space_id={space_id}'
         response = self.get_data_trading(endpoint)
         return response['results']
 
