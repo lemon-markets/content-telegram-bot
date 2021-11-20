@@ -25,14 +25,14 @@ class TradingBot:
         # collect user's name
         user = update.message.from_user.name
 
-        # # if Trading Venue closed, indicate next opening time and end conversation
-        # if not TradingVenue().is_open():
-        #     opening_date: str = TradingVenue().get_next_opening_day()
-        #     opening_time: str = TradingVenue().get_next_opening_time()
-        #     update.message.reply_text(
-        #         f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
-        #     )
-        #     return ConversationHandler.END
+        # if Trading Venue closed, indicate next opening time and end conversation
+        if not TradingVenue().is_open():
+            opening_date: str = TradingVenue().get_next_opening_day()
+            opening_time: str = TradingVenue().get_next_opening_time()
+            update.message.reply_text(
+                f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
+            )
+            return ConversationHandler.END
 
         update.message.reply_text(
             f'Hi {user}! I\'m the Lemon Trader Bot! I can place trades for you using the lemon.markets API. '
