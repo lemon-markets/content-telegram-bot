@@ -3,12 +3,17 @@ from helpers import RequestHandler
 
 class Space(RequestHandler):
 
-    def get_space_uuid(self,):
+    def get_spaces(self,):
         endpoint = f'spaces'
-        response = self.get_data_trading(endpoint)['results']
-        return response[0]['uuid']
+        results = self.get_data_trading(endpoint)['results']
 
-    def get_balance(self, space_uuid):
-        endpoint = f'spaces/{space_uuid}/'
+        spaces: dict = {}
+        for result in results:
+            spaces[result['name']] = result['id']
+
+        return spaces
+
+    def get_balance(self, space_id):
+        endpoint = f'spaces/{space_id}/'
         response = self.get_data_trading(endpoint)
-        return float(response['state']['cash_to_invest'])
+        return response['results']['buying_power']

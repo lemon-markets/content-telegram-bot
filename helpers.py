@@ -7,8 +7,8 @@ class RequestHandler:
 
     def __init__(self):
         self.api_key: str = os.environ.get("API_KEY")
-        self.url_trading: str = os.environ.get("TRADING_URL")
-        self.url_market: str = os.environ.get("MARKET_URL")
+        self.url_trading: str = os.environ.get("BASE_URL_TRADING")
+        self.url_market: str = os.environ.get("BASE_URL_DATA")
 
     def get_data_trading(self, endpoint: str):
         response = requests.get(self.url_trading + endpoint, headers=self.headers)

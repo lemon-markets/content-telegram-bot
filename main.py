@@ -29,16 +29,13 @@ def main() -> None:
 
     conv_handler = ConversationHandler(
         # initiate the conversation
-        entry_points=[CommandHandler('start', TradingBot().start)],
+        entry_points=[CommandHandler('trade', TradingBot().trade)],
         # different conversation steps and handlers that should be used if user sends a message
         # when conversation with them is currently in that state
         states={
-            TradingBot.ID: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_client_id)],
-            TradingBot.SECRET: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_client_secret)],
-            TradingBot.TYPE: [
-                MessageHandler(
-                    Filters.regex('^(Stock|stock|Bond|bond|Fund|fund|ETF|etf|Warrant|warrant)$') & ~Filters.regex('^/'),
-                    TradingBot().get_search_query)],
+            TradingBot.SPACE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_type)],
+            TradingBot.TYPE: [MessageHandler(Filters.regex('^(Stock|stock|ETF|etf)$') & ~Filters.regex('^/'),
+                                             TradingBot().get_search_query)],
             TradingBot.REPLY: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_instrument_name)],
             TradingBot.NAME: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_isin)],
             TradingBot.ISIN: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_side)],
@@ -50,9 +47,25 @@ def main() -> None:
         fallbacks=[CommandHandler(('cancel', 'end'), TradingBot().cancel)],
     )
 
-    moon_handler = CommandHandler('moon', TradingBot().to_the_moon)
-    portfolio_handler = CommandHandler('portfolio', TradingBot().show_portfolio)
+    # quick_conv_handler = ConversationHandler(
+    #     entry_points=[CommandHandler('quicktrade', TradingBot().quick_trade, pass_args=True)],
+    #     states={
+    #         TradingBot.QUICK: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().confirm_quicktrade)],
+    #     },
+    #     fallbacks=[CommandHandler('cancel', TradingBot().cancel)]
+    # )
 
+    portfolio_handler = ConversationHandler(
+        entry_points=[CommandHandler('portfolio', TradingBot().get_space, pass_args=True)],
+        states={
+            TradingBot.PORTFOLIO: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().show_portfolio)],
+        },
+        fallbacks=[CommandHandler('cancel', TradingBot().cancel)]
+    )
+    start_handler = CommandHandler('start', TradingBot().start)
+    moon_handler = CommandHandler('moon', TradingBot().to_the_moon)
+
+    dispatcher.add_handler(start_handler)
     dispatcher.add_handler(conv_handler)
     dispatcher.add_handler(moon_handler)
     dispatcher.add_handler(portfolio_handler)

@@ -13,7 +13,7 @@ from models.TradingVenue import TradingVenue
 
 
 class TradingBot:
-    TYPE, ID, SECRET, SPACE, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION = range(10)
+    TYPE, ID, SECRET, SPACE, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION, PORTFOLIO = range(11)
 
     dotenv_file = dotenv.find_dotenv()
     dotenv.load_dotenv(dotenv_file)
@@ -22,59 +22,64 @@ class TradingBot:
         """Initiates conversation and prompts user to fill in lemon.markets client ID."""
         context.user_data.clear()
 
+        # collect user's name
+        user = update.message.from_user.name
+
+        # # if Trading Venue closed, indicate next opening time and end conversation
+        # if not TradingVenue().is_open():
+        #     opening_date: str = TradingVenue().get_next_opening_day()
+        #     opening_time: str = TradingVenue().get_next_opening_time()
+        #     update.message.reply_text(
+        #         f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
+        #     )
+        #     return ConversationHandler.END
+
         update.message.reply_text(
-            'Hi! I\'m the Lemon Trader Bot! I can place trades for you using the lemon.markets API. '
-            'Send /cancel to stop talking to me.\n\n'
-            'Please fill in your lemon.markets API key.',
+            f'Hi {user}! I\'m the Lemon Trader Bot! I can place trades for you using the lemon.markets API. '
+            'You can control me by sending or clicking on these commands:\n\n'
+
+            'Regular Commands (no input required):\n'
+            '/trade - place trade\n'
+            '/portfolio - list your portfolio\n'
+            '/moon - meme stock generator\n\n'
+            'Special Commands (input required):\n'
+            '/quicktrade - place shortform trade, must be in following format: \'buy 5 apple stock\''
         )
 
         print("Conversation started.")
         print(context.user_data)
 
-        return TradingBot.ID
+    def trade(self, update: Update, context: CallbackContext) -> int:
+        context.chat_data.clear()
 
-    def get_client_id(self, update: Update, context: CallbackContext) -> int:
-        """Prompts user to fill in lemon.markets client secret."""
-        context.user_data['client_id'] = update.message.text
+        print(f'user_data {context.user_data}')
 
-        update.message.reply_text('Please enter your lemon.markets client secret.')
-        print(context.user_data)
-        return TradingBot.SECRET
+        context.user_data['spaces_ids'] = Space().get_spaces()
 
-    def get_client_secret(self, update: Update, context: CallbackContext) -> int:
-        """Authenticates user, retrieves access token & space UUID and prompts user to select instrument type."""
-        context.user_data['client_secret'] = update.message.text
-        print(context.user_data)
-
-        try:
-            # if Trading Venue closed, indicate next opening time and end conversation
-            if not TradingVenue().is_open():
-                opening_date: str = TradingVenue().get_next_opening_day()
-                opening_time: str = TradingVenue().get_next_opening_time()
-                update.message.reply_text(
-                    f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
-                )
-                return ConversationHandler.END
-
-            context.user_data['space_uuid'] = Space().get_space_uuid()
-
-        except Exception as e:
-            print(e)
-            update.message.reply_text(
-                "There was an error, ending conversation. If you'd like to try again, send /start")
-            return ConversationHandler.END
-
-        reply_keyboard = [['Stock', 'Bond', 'Fund', 'ETF', 'Warrant']]
+        spaces = list(context.user_data['spaces_ids'].keys())
+        reply_keyboard = [spaces]
 
         update.message.reply_text(
-            'Authentication successful.\n\n'
+            'Please select a Space.',
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard, one_time_keyboard=True,
+            ),
+        )
+        return TradingBot.SPACE
+
+    def get_type(self, update: Update, context: CallbackContext) -> int:
+        context.user_data['space_id'] = context.user_data['spaces_ids'].get(update.message.text)
+
+        reply_keyboard = [['Stock', 'ETF']]
+
+        print(f'user_data {context.user_data}')
+
+        update.message.reply_text(
             'What type of instrument do you want to trade?',
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard, one_time_keyboard=True,
             ),
         )
-
-        print(context.user_data)
         return TradingBot.TYPE
 
     def get_search_query(self, update: Update, context: CallbackContext) -> int:
@@ -82,16 +87,18 @@ class TradingBot:
         # store user response in dictionary with key 'type'
         context.user_data['type'] = update.message.text.lower()
 
+        print(f'user_data {context.user_data}')
+
         update.message.reply_text(
             f'What is the name of the {context.user_data["type"]} you would like to trade?')
-
-        print(context.user_data)
 
         return TradingBot.REPLY
 
     def get_instrument_name(self, update: Update, context: CallbackContext) -> int:
         """Searches for instrument and prompts user to select an instrument."""
         context.user_data['search_query'] = update.message.text.lower()
+
+        print(f'user_data {context.user_data}')
 
         try:
             instruments = Instrument().get_titles(context.user_data['search_query'],
@@ -113,7 +120,6 @@ class TradingBot:
                 reply_keyboard, one_time_keyboard=True,
             ),
         )
-        print(context.user_data)
         return TradingBot.NAME
 
     def get_isin(self, update: Update, context: CallbackContext) -> int:
@@ -145,7 +151,8 @@ class TradingBot:
                     reply_keyboard, one_time_keyboard=True,
                 )
             )
-            print(context.user_data)
+            print(f'user_data {context.user_data}')
+
             return TradingBot.ISIN
 
     def get_side(self, update: Update, context: CallbackContext) -> int:
@@ -165,25 +172,28 @@ class TradingBot:
         if context.user_data['side'] == 'buy':
             update.message.reply_text(
                 f'This instrument is currently trading for €{context.user_data["ask"]}, your total balance is '
-                f'€{round(context.user_data["balance"], 2)}. '
+                f'€{context.user_data["balance"]/10000:,.2f}. '
                 f'How many shares do you wish to {context.user_data["side"]}?'
             )
         # if user chooses sell, retrieve how many shares owned
         else:
-            positions = Portfolio().get_portfolio(context.user_data['space_uuid'])
+            positions = Portfolio().get_portfolio(context.user_data['space_id'])
             # initialise shares owned to 0
             context.user_data['shares_owned'] = 0
 
             # if instrument in portfolio, update shares owned
             if context.user_data['isin'] in positions:
                 context.user_data['shares_owned'] = \
-                    positions[context.user_data['isin']][context.user_data['space_uuid']].get('quantity')
+                    positions[context.user_data['isin']][context.user_data['space_id']].get('quantity')
 
             update.message.reply_text(
                 f'This instrument can be sold for €{round(context.user_data["bid"], 2)}, you currently own '
                 f'{context.user_data["shares_owned"]} share(s). '
                 f'How many shares do you wish to {context.user_data["side"]}?'
             )
+
+            print(f'user_data {context.user_data}')
+
         return TradingBot.SIDE
 
     def get_quantity(self, update: Update, context: CallbackContext) -> int:
@@ -208,7 +218,7 @@ class TradingBot:
             context.user_data['total'] = context.user_data['quantity'] * float(context.user_data['bid'])
 
         # if buy and can't afford buy, prompt user to enter new amount
-        if context.user_data['side'] == 'buy' and context.user_data['total'] > context.user_data['balance']:
+        if context.user_data['side'] == 'buy' and context.user_data['total'] > context.user_data['balance']/10000:
             update.message.reply_text(
                 f'You do not have enough money to buy {context.user_data["quantity"]} of {context.user_data["title"]}. '
                 'Please enter a new amount.'
@@ -255,6 +265,7 @@ class TradingBot:
                     reply_keyboard, one_time_keyboard=True,
                 )
             )
+            print(f'user_data {context.user_data}')
 
             return TradingBot.QUANTITY
 
@@ -298,8 +309,6 @@ class TradingBot:
 
             context.user_data['average_price'] = order_summary.get('average_price')
 
-            print(context.user_data)
-
             update.message.reply_text(
                 f'Your order was executed at €{round(float(context.user_data["average_price"]), 2)} per share. '
                 'Would you like to make another trade?',
@@ -307,6 +316,7 @@ class TradingBot:
                     reply_keyboard, one_time_keyboard=True
                 )
             )
+        print(f'user_data {context.user_data}')
 
         return TradingBot.CONFIRMATION
 
@@ -334,7 +344,7 @@ class TradingBot:
             "Bye! Come back if you would like to make any other trades.", reply_markup=ReplyKeyboardRemove()
         )
         context.user_data.clear()
-        print(context.user_data)
+        print(f'user_data {context.user_data}')
         return ConversationHandler.END
 
     def to_the_moon(self, update: Update, context: CallbackContext):
@@ -351,19 +361,40 @@ class TradingBot:
             f'{meme_stock} to the moon 🚀'
         )
 
+    def get_space(self, update: Update, context: CallbackContext):
+        """Retrieves space for which to view portfolio."""
+
+        context.user_data['spaces_ids'] = Space().get_spaces()
+        spaces = list(context.user_data['spaces_ids'].keys())
+        reply_keyboard = [spaces]
+
+        update.message.reply_text(
+            'For which Space would you like to view your portfolio?',
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard, one_time_keyboard=True,
+            ),
+        )
+        return TradingBot.PORTFOLIO
+
     def show_portfolio(self, update: Update, context: CallbackContext):
-        """Displays portfolio."""
+        context.user_data['space_id_portfolio'] = context.user_data['spaces_ids'].get(update.message.text)
+
         try:
-            portfolio = Portfolio().get_portfolio(context.user_data['space_id'])
+            portfolio = Portfolio().get_portfolio(context.user_data['space_id_portfolio'])
+            print(portfolio)
         except Exception as e:
             print(e)
             update.message.reply_text(
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        for isin in portfolio:
-            update.message.reply_text(
-                f'Name: {Instrument().get_title(isin)}'
-                f'Quantity: {portfolio[isin][context.user_data["space_id"]]["quantity"]}\n'
-                f'Average Price: €{portfolio[isin][context.user_data["space_id"]]["buy_price_avg"]}'
-            )
+        for isin, information in portfolio.items():
+            name = Instrument().get_title(isin)
+            quantity = information[context.user_data["space_id_portfolio"]]["quantity"]
+            average_price = information[context.user_data["space_id_portfolio"]]["buy_price_avg"]
+            if quantity != 0:
+                update.message.reply_text(
+                    f'Name: {name}\n'
+                    f'Quantity: {quantity}\n'
+                    f'Average Price: €{average_price/10000:,.2f}'
+                )
