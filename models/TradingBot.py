@@ -9,7 +9,6 @@ from models.Instrument import Instrument
 from models.Order import Order
 from models.Portfolio import Portfolio
 from models.Space import Space
-from models.Token import Token
 from models.TradingVenue import TradingVenue
 
 
