@@ -1,35 +1,39 @@
+import os
+
 from helpers import RequestHandler
 
 
 class Order(RequestHandler):
 
-    def place_order(self, isin: str, valid_until: float, quantity: int, side: str, space_uuid: str):
+    def place_order(self, isin: str, expires_at: str, quantity: int, side: str, space_id: str):
         order_details = {
             "isin": isin,
-            "valid_until": valid_until,
+            "expires_at": expires_at,
             "side": side,
             "quantity": quantity,
+            "venue": os.environ.get("MIC"),
+            "space_id": space_id
         }
-        endpoint = f'spaces/{space_uuid}/orders/'
+        endpoint = f'orders/'
         response = self.post_data(endpoint, order_details)
         return response
 
-    def activate_order(self, order_uuid: str, space_uuid: str):
-        endpoint = f'spaces/{space_uuid}/orders/{order_uuid}/activate/'
-        response = self.put_data(endpoint)
+    def activate_order(self, order_id: str):
+        endpoint = f'orders/{order_id}/activate/'
+        response = self.post_data(endpoint, {})
         return response
 
-    def get_order(self, order_uuid: str, space_uuid: str):
-        endpoint = f'spaces/{space_uuid}/orders/{order_uuid}/'
+    def get_order(self, order_id: str):
+        endpoint = f'orders/{order_id}'
         response = self.get_data_trading(endpoint)
         return response
 
-    def get_orders(self, space_uuid: str):
-        endpoint = f'spaces/{space_uuid}/orders/'
+    def get_orders(self, space_id: str):
+        endpoint = f'orders?space_id={space_id}'
         response = self.get_data_trading(endpoint)
         return response
 
-    def delete_order(self, order_uuid: str, space_uuid: str):
-        endpoint = f'spaces/{space_uuid}/orders/{order_uuid}/'
+    def delete_order(self, order_id: str):
+        endpoint = f'orders/{order_id}/'
         response = self.delete_data(endpoint)
         return response

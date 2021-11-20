@@ -15,13 +15,12 @@ If you'd like a step-by-step tutorial on this project, check out our YouTube vid
 ## 🛠️ Getting Set-Up
 
 
-This repository requires the creation of an `.env` file with the following variables to communicate with the lemon.markets API: `MIC`, 
-`TRADING_URL`, `MARKET_URL` and `AUTH_URL`. It also needs a `BOT_TOKEN` to communicate with the Telegram API.
+This repository requires the creation of an `.env` file with the following variables to communicate with the lemon.markets API: `MIC`, `API_KEY` 
+`TRADING_URL` and `MARKET_URL`. It also needs a `BOT_TOKEN` to communicate with the Telegram API.
 
 ### 🍋 lemon.markets
 
-There are three lemon.markets API URLs, the first one is related to authentication (as all requests need an access token), the second to trading and the third
-to market data. Please refer to the [documentation](https://docs.lemon.markets) to learn more and find the appropriate URLs. 
+There are two lemon.markets API URLs, one for trading and the other for market data. Please refer to the [documentation](https://docs.lemon.markets) to learn more and find the appropriate URLs. 
 
 ### 📞 Telegram
 

@@ -7,7 +7,8 @@ from helpers import RequestHandler
 class Instrument(RequestHandler):
 
     def get_titles(self, search_query: str, instrument_type: str):
-        endpoint = f'instruments/?search={search_query}&type={instrument_type}'
+        mic = os.getenv("MIC")
+        endpoint = f'instruments/?search={search_query}&type={instrument_type}&mic={mic}'
         response = self.get_data_market(endpoint)
         results = response['results']
 
@@ -22,6 +23,13 @@ class Instrument(RequestHandler):
 
         return instruments
 
+    def get_title(self, isin: str):
+        mic = os.getenv("MIC")
+        endpoint = f'instruments/?isin={isin}&mic={mic}'
+        response = self.get_data_market(endpoint)
+
+        return response['results'][0]['title']
+
     def get_price(self, isin: str):
         mic = os.getenv("MIC")
         endpoint = f'quotes/?from=latest&mic={mic}&isin={isin}'
@@ -30,6 +38,10 @@ class Instrument(RequestHandler):
         bid = response['results'][0]['b']
         ask = response['results'][0]['a']
         return bid, ask
+
+    def get_quick_isin(self, search_query: str, instrument_type: str):
+        endpoint = f'instruments/?search={search_query}&type={instrument_type}'
+        return self.get_data_market(endpoint)['results'][0]
 
     def get_memes(self):
         # GME, BB, CLOV, AMC, PLTR, WISH, NIO, TSLA, Tilray, NOK
