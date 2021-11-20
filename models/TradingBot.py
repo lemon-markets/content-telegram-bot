@@ -40,10 +40,9 @@ class TradingBot:
 
             'Regular Commands (no input required):\n'
             '/trade - place trade\n'
+            '/quicktrade - place shortform trade\n'
             '/portfolio - list your portfolio\n'
-            '/moon - meme stock generator\n\n'
-            'Special Commands (input required):\n'
-            '/quicktrade - place shortform trade, must be in following format: \'buy 5 apple stock\''
+            '/moon - meme stock generator\n'
         )
 
         print("Conversation started.")
