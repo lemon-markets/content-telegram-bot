@@ -106,8 +106,8 @@ class TradingBot:
         context.user_data['search_query'] = update.message.text.lower()
 
         try:
-            instruments = Instrument(context.user_data['access_token']).get_titles(context.user_data['search_query'],
-                                                                                   context.user_data['type'])
+            instruments = Instrument().get_titles(context.user_data['search_query'],
+                                                  context.user_data['type'])
         except Exception as e:
             print(e)
             update.message.reply_text(
@@ -133,8 +133,8 @@ class TradingBot:
         text = update.message.text
 
         try:
-            instruments = Instrument(context.user_data['access_token']).get_titles(context.user_data['search_query'],
-                                                                                   context.user_data['type'])
+            instruments = Instrument().get_titles(context.user_data['search_query'],
+                                                  context.user_data['type'])
         except Exception as e:
             print(e)
             update.message.reply_text(
@@ -221,8 +221,6 @@ class TradingBot:
         else:
             context.user_data['total'] = context.user_data['quantity'] * float(context.user_data['bid'])
 
-        valid_time = (datetime.datetime.now() + datetime.timedelta(hours=1)).timestamp()
-
         # if buy and can't afford buy, prompt user to enter new amount
         if context.user_data['side'] == 'buy' and context.user_data['total'] > context.user_data['balance']:
             update.message.reply_text(
@@ -248,21 +246,15 @@ class TradingBot:
 
         else:
             try:
-                # ensure you have a valid token
-                context.user_data['access_token'] = Token().authenticate(
-                    context.user_data['client_id'],
-                    context.user_data['client_secret']
-                ).get('access_token')
-
                 # place order
-                context.user_data['order_uuid'] = \
-                    Order(token=context.user_data['access_token']).place_order(
+                context.user_data['order_id'] = \
+                    Order().place_order(
                         isin=context.user_data['isin'],
-                        valid_until=valid_time,
+                        expires_at="p0d",
                         side=context.user_data['side'],
                         quantity=context.user_data['quantity'],
-                        space_uuid=context.user_data['space_uuid']
-                    )['uuid']
+                        space_id=context.user_data['space_id']
+                    ).get('results')['id']
             except Exception as e:
                 print(e)
                 update.message.reply_text(
@@ -295,9 +287,8 @@ class TradingBot:
             )
         else:
             try:
-                Order(context.user_data['access_token']).activate_order(
-                    context.user_data['order_uuid'],
-                    context.user_data['space_uuid']
+                Order().activate_order(
+                    context.user_data['order_id'],
                 )
             except Exception as e:
                 print(e)
@@ -313,7 +304,6 @@ class TradingBot:
                 order_summary = Order(context.user_data['access_token']).get_order(
 
                     context.user_data['order_uuid'],
-                    context.user_data['space_uuid']
                 )
                 if order_summary.get('status') == 'executed':
                     print('executed')
