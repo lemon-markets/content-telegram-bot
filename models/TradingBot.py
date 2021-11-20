@@ -13,13 +13,13 @@ from models.TradingVenue import TradingVenue
 
 
 class TradingBot:
-    TYPE, ID, SECRET, SPACE, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION, PORTFOLIO = range(11)
+    TYPE, ID, SECRET, SPACE, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION, PORTFOLIO, QUICK, QUICKTRADE = range(13)
 
     dotenv_file = dotenv.find_dotenv()
     dotenv.load_dotenv(dotenv_file)
 
     def start(self, update: Update, context: CallbackContext) -> int:
-        """Initiates conversation and prompts user to fill in lemon.markets client ID."""
+        """Initiates conversation."""
         context.user_data.clear()
 
         # collect user's name
@@ -50,6 +50,7 @@ class TradingBot:
         print(context.user_data)
 
     def trade(self, update: Update, context: CallbackContext) -> int:
+        """Initiates trade sequence."""
         context.chat_data.clear()
 
         print(f'user_data {context.user_data}')
@@ -67,7 +68,123 @@ class TradingBot:
         )
         return TradingBot.SPACE
 
+    def quick_trade(self, update: Update, context: CallbackContext) -> int:
+        """Initiates quick trade sequence."""
+        context.user_data['space_id_quicktrade'] = context.user_data['spaces_ids'].get(update.message.text)
+
+        update.message.reply_text(
+            'Please specify your quick trade in the following format: \'buy 5 apple stock\''
+        )
+        return TradingBot.QUICKTRADE
+
+    def perform_quicktrade(self, update: Update, context: CallbackContext) -> int:
+        """Places quicktrade order."""
+        trade_elements = update.message.text.split(' ')
+
+        if len(trade_elements) != 4:
+            update.message.reply_text(
+                'A quick trade must be placed in the following format: \'/quicktrade buy 5 apple stock\''
+            )
+            return ConversationHandler.END
+        else:
+            try:
+                side = trade_elements[0].lower()
+                quantity = int(trade_elements[1])
+                search = trade_elements[2].lower()
+                if trade_elements[3].lower().startswith('share'):
+                    instrument_type = 'stock'
+                else:
+                    instrument_type = trade_elements[3].lower()
+
+                instrument = Instrument().get_quick_isin(search, instrument_type)
+
+                context.user_data['order'] = Order().place_order(instrument['isin'],
+                                                                 "p0d",
+                                                                 quantity,
+                                                                 side,
+                                                                 context.user_data['space_id_quicktrade'])
+                [context.user_data['bid'], context.user_data['ask']] = Instrument().get_price(instrument['isin'])
+                reply_keyboard = [['Confirm', 'Cancel']]
+
+                if side == 'buy':
+                    price = round(context.user_data['ask'], 2)
+
+                else:
+                    price = round(context.user_data['bid'], 2)
+
+                update.message.reply_text(
+                    f'You indicated that you wish to {side} {quantity} {instrument.get("title")} {instrument_type} at €{price} per share. Is that '
+                    f'correct?',
+                    reply_markup=ReplyKeyboardMarkup(
+                        reply_keyboard, one_time_keyboard=True,
+                    ),
+                )
+                return TradingBot.QUICK
+
+            except Exception as e:
+                print(e)
+                update.message.reply_text(
+                    "There was an error, ending conversation.")
+                return ConversationHandler.END
+
+    def confirm_quicktrade(self, update: Update, context: CallbackContext) -> int:
+        """Activates quicktrade order."""
+        reply = update.message.text
+        if reply == 'Confirm':
+            if context.user_data['order']['status'] == 'error':
+                update.message.reply_text(
+                    "Insufficient holdings, ending conversation"
+                )
+                return ConversationHandler.END
+            try:
+                print(context.user_data)
+                order = Order().activate_order(context.user_data['order']['results'].get('id'))
+                update.message.reply_text(
+                    "Please wait while we process your order."
+                )
+                start = datetime.datetime.now()
+                while True and len(context.user_data['order']) > 1:
+
+                    order_summary = Order().get_order(
+                        context.user_data['order']['results'].get('id')
+                    )
+                    # need to check here if the order is actually placed, so maybe check length of 'order'
+                    if order_summary['results'].get('status') == 'executed':
+                        context.user_data['average_price'] = order_summary['results'].get('executed_price')
+                        print('executed')
+                        break
+                    elif datetime.datetime.now() - start >= datetime.timedelta(minutes=3):
+                        update.message.reply_text(
+                            'We\'re currently experiencing some delays. Your order was not executed. Please try again '
+                            'later. '
+                        )
+                        # delete all inactive orders
+                        Order().delete_order(context.user_data['space_id_quicktrade'])
+                        return ConversationHandler.END
+                    time.sleep(1)
+
+                update.message.reply_text(
+                    f'Your order was executed at €{round(float(context.user_data["average_price"]), 2)} per share. '
+                )
+                return ConversationHandler.END
+
+            except Exception as e:
+                print(e)
+                update.message.reply_text(
+                    "There was an error, ending conversation.")
+                return ConversationHandler.END
+        elif reply == 'Cancel':
+            update.message.reply_text(
+                "You cancelled the order. Ending conversation.")
+
+            return ConversationHandler.END
+        else:
+            update.message.reply_text(
+                "There was an error, ending conversation.")
+            return ConversationHandler.END
+
     def get_type(self, update: Update, context: CallbackContext) -> int:
+        """Retrieves financial instrument type."""
         context.user_data['space_id'] = context.user_data['spaces_ids'].get(update.message.text)
 
         reply_keyboard = [['Stock', 'ETF']]
@@ -172,7 +289,7 @@ class TradingBot:
         if context.user_data['side'] == 'buy':
             update.message.reply_text(
                 f'This instrument is currently trading for €{context.user_data["ask"]}, your total balance is '
-                f'€{context.user_data["balance"]/10000:,.2f}. '
+                f'€{context.user_data["balance"] / 10000:,.2f}. '
                 f'How many shares do you wish to {context.user_data["side"]}?'
             )
         # if user chooses sell, retrieve how many shares owned
@@ -218,7 +335,7 @@ class TradingBot:
             context.user_data['total'] = context.user_data['quantity'] * float(context.user_data['bid'])
 
         # if buy and can't afford buy, prompt user to enter new amount
-        if context.user_data['side'] == 'buy' and context.user_data['total'] > context.user_data['balance']/10000:
+        if context.user_data['side'] == 'buy' and context.user_data['total'] > context.user_data['balance'] / 10000:
             update.message.reply_text(
                 f'You do not have enough money to buy {context.user_data["quantity"]} of {context.user_data["title"]}. '
                 'Please enter a new amount.'
@@ -396,5 +513,5 @@ class TradingBot:
                 update.message.reply_text(
                     f'Name: {name}\n'
                     f'Quantity: {quantity}\n'
-                    f'Average Price: €{average_price/10000:,.2f}'
+                    f'Average Price: €{average_price / 10000:,.2f}'
                 )

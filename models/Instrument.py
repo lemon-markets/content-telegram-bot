@@ -39,6 +39,10 @@ class Instrument(RequestHandler):
         ask = response['results'][0]['a']
         return bid, ask
 
+    def get_quick_isin(self, search_query: str, instrument_type: str):
+        endpoint = f'instruments/?search={search_query}&type={instrument_type}'
+        return self.get_data_market(endpoint)['results'][0]
+
     def get_memes(self):
         # GME, BB, CLOV, AMC, PLTR, WISH, NIO, TSLA, Tilray, NOK
         memes = ['US36467W1099', 'CA09228F1036', 'US18914F1030', 'US00165C1045', 'US69608A1088', 'US21077C1071',
