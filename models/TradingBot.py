@@ -426,7 +426,7 @@ class TradingBot:
             context.user_data['average_price'] = order_summary.get('average_price')
 
             update.message.reply_text(
-                f'Your order was executed at €{round(float(context.user_data["average_price"]), 2)} per share. '
+                f'Your order was executed at €{context.user_data["average_price"]/10000:,.2f} per share. '
                 'Would you like to make another trade?',
                 reply_markup=ReplyKeyboardMarkup(
                     reply_keyboard, one_time_keyboard=True
