@@ -48,7 +48,7 @@ def main() -> None:
     )
 
     quick_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('quicktrade', TradingBot().trade, pass_args=True)],
+        entry_points=[CommandHandler('quicktrade', TradingBot().trade)],
         states={
             TradingBot.SPACE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().quick_trade)],
             TradingBot.QUICKTRADE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().perform_quicktrade)],
@@ -58,7 +58,7 @@ def main() -> None:
     )
 
     portfolio_handler = ConversationHandler(
-        entry_points=[CommandHandler('portfolio', TradingBot().get_space, pass_args=True)],
+        entry_points=[CommandHandler('portfolio', TradingBot().get_space)],
         states={
             TradingBot.PORTFOLIO: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().show_portfolio)],
         },
