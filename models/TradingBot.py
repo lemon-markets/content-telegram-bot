@@ -302,10 +302,9 @@ class TradingBot:
             context.chat_data['shares_owned'] = 0
 
             # if instrument in portfolio, update shares owned
-            for position in positions:
-                if context.chat_data['isin'] in position:
-                    context.chat_data['shares_owned'] = \
-                        positions[context.chat_data['isin']][context.user_data['space_id']].get('quantity')
+            if context.chat_data['isin'] in positions:
+                context.chat_data['shares_owned'] = \
+                    positions[context.chat_data['isin']][context.user_data['space_id']].get('quantity')
 
             update.message.reply_text(
                 f'This instrument can be sold for €{round(context.chat_data["bid"], 2)}, you currently own '
@@ -499,25 +498,18 @@ class TradingBot:
         context.chat_data['space_id_portfolio'] = context.chat_data['spaces_ids'].get(update.message.text)
 
         try:
-            # portfolio = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
-            # print(portfolio)
-            portfolio_items = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
-            print(portfolio_items)
+            portfolio = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
+            print(portfolio)
         except Exception as e:
             print(e)
             update.message.reply_text(
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        # for isin, information in portfolio:
-
-        for portfolio_item in portfolio_items:
-            name = portfolio_item.get("isin_title")
-            quantity = portfolio_item.get("quantity")
-            average_price = portfolio_item.get("buy_price_avg")
-            # name = information[context.chat_data["space_id_portfolio"]]["isin_title"]
-            # quantity = information[context.chat_data["space_id_portfolio"]]["quantity"]
-            # average_price = information[context.chat_data["space_id_portfolio"]]["buy_price_avg"]
+        for isin, information in portfolio.items():
+            name = Instrument().get_title(isin)
+            quantity = information[context.chat_data["space_id_portfolio"]]["quantity"]
+            average_price = information[context.chat_data["space_id_portfolio"]]["buy_price_avg"]
             if quantity != 0:
                 update.message.reply_text(
                     f'Name: {name}\n'
