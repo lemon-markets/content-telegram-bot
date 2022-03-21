@@ -499,8 +499,6 @@ class TradingBot:
         context.chat_data['space_id_portfolio'] = context.chat_data['spaces_ids'].get(update.message.text)
 
         try:
-            # portfolio = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
-            # print(portfolio)
             portfolio_items = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
             print(portfolio_items)
         except Exception as e:
@@ -509,15 +507,11 @@ class TradingBot:
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        # for isin, information in portfolio:
-
         for portfolio_item in portfolio_items:
             name = portfolio_item.get("isin_title")
             quantity = portfolio_item.get("quantity")
             average_price = portfolio_item.get("buy_price_avg")
-            # name = information[context.chat_data["space_id_portfolio"]]["isin_title"]
-            # quantity = information[context.chat_data["space_id_portfolio"]]["quantity"]
-            # average_price = information[context.chat_data["space_id_portfolio"]]["buy_price_avg"]
+
             if quantity != 0:
                 update.message.reply_text(
                     f'Name: {name}\n'
