@@ -27,11 +27,6 @@ class Order(RequestHandler):
         response = self.get_data_trading(endpoint)
         return response
 
-    # def get_orders(self, space_id: str):
-    #     endpoint = f'orders?space_id={space_id}'
-    #     response = self.get_data_trading(endpoint)
-    #     return response
-
     def delete_order(self, order_id: str):
         endpoint = f'orders/{order_id}/'
         response = self.delete_data(endpoint)
