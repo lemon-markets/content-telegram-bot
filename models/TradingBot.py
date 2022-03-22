@@ -280,12 +280,8 @@ class TradingBot:
             context.chat_data['shares_owned'] = 0
 
             # if instrument in portfolio, update shares owned
-            # todo: check if this works
             for position in positions:
                 if position['isin'] == context.chat_data['isin']:
-                #if context.chat_data['isin'] in position:
-                    # context.chat_data['shares_owned'] = \
-                    #     positions[context.chat_data['isin']][context.user_data['space_id']].get('quantity')
                     context.chat_data['shares_owned'] = position.get('quantity')
 
             update.message.reply_text(
@@ -350,8 +346,7 @@ class TradingBot:
                         isin=context.chat_data['isin'],
                         expires_at="p0d",
                         side=context.chat_data['side'],
-                        quantity=context.chat_data['quantity'],
-                        #space_id=context.user_data['space_id']
+                        quantity=context.chat_data['quantity']
                     ).get('results')['id']
             except Exception as e:
                 print(e)
@@ -461,24 +456,7 @@ class TradingBot:
             f'{meme_stock} to the moon 🚀'
         )
 
-    # def get_space(self, update: Update, context: CallbackContext):
-    #     """Retrieves space for which to view portfolio."""
-    #
-    #     context.chat_data['spaces_ids'] = Space().get_spaces()
-    #     spaces = list(context.chat_data['spaces_ids'].keys())
-    #     reply_keyboard = [spaces]
-    #
-    #     update.message.reply_text(
-    #         'For which Space would you like to view your portfolio?',
-    #         reply_markup=ReplyKeyboardMarkup(
-    #             reply_keyboard, one_time_keyboard=True,
-    #         ),
-    #     )
-    #     return TradingBot.PORTFOLIO
-
     def show_positions(self, update: Update, context: CallbackContext):
-        #context.chat_data['space_id_portfolio'] = context.chat_data['spaces_ids'].get(update.message.text)
-
         try:
             positions = Positions().get_positions()
             print(positions)
