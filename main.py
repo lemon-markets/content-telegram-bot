@@ -33,7 +33,6 @@ def main() -> None:
         # different conversation steps and handlers that should be used if user sends a message
         # when conversation with them is currently in that state
         states={
-            TradingBot.SPACE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_type)],
             TradingBot.TYPE: [MessageHandler(Filters.regex('^(Stock|stock|ETF|etf)$') & ~Filters.regex('^/'),
                                              TradingBot().get_search_query)],
             TradingBot.REPLY: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().get_instrument_name)],
@@ -48,29 +47,21 @@ def main() -> None:
     )
 
     quick_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('quicktrade', TradingBot().trade)],
+        entry_points=[CommandHandler('quicktrade', TradingBot().quick_trade)],
         states={
-            TradingBot.SPACE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().quick_trade)],
             TradingBot.QUICKTRADE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().perform_quicktrade)],
             TradingBot.QUICK: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().confirm_quicktrade)],
         },
         fallbacks=[CommandHandler('cancel', TradingBot().cancel)]
     )
 
-    portfolio_handler = ConversationHandler(
-        entry_points=[CommandHandler('portfolio', TradingBot().get_space)],
-        states={
-            TradingBot.PORTFOLIO: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().show_portfolio)],
-        },
-        fallbacks=[CommandHandler('cancel', TradingBot().cancel)]
-    )
+    positions_handler = CommandHandler('positions', TradingBot().show_positions)
     start_handler = CommandHandler('start', TradingBot().start)
     moon_handler = CommandHandler('moon', TradingBot().to_the_moon)
-
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(conv_handler)
     dispatcher.add_handler(moon_handler)
-    dispatcher.add_handler(portfolio_handler)
+    dispatcher.add_handler(positions_handler)
     dispatcher.add_handler(quick_conv_handler)
 
 

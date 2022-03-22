@@ -7,13 +7,13 @@ from telegram.ext import CallbackContext, ConversationHandler
 
 from models.Instrument import Instrument
 from models.Order import Order
-from models.Portfolio import Portfolio
-from models.Space import Space
+from models.Positions import Positions
+from models.Account import Account
 from models.TradingVenue import TradingVenue
 
 
 class TradingBot:
-    TYPE, ID, SECRET, SPACE, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION, PORTFOLIO, QUICK, QUICKTRADE = range(13)
+    TYPE, ID, SECRET, REPLY, NAME, ISIN, SIDE, QUANTITY, CONFIRMATION, QUICK, QUICKTRADE = range(11)
 
     dotenv_file = dotenv.find_dotenv()
     dotenv.load_dotenv(dotenv_file)
@@ -42,37 +42,16 @@ class TradingBot:
             'Regular Commands (no input required):\n'
             '/trade - place trade\n'
             '/quicktrade - place shortform trade\n'
-            '/portfolio - list your portfolio\n'
+            '/positions - list your positions\n'
             '/moon - meme stock generator\n'
         )
 
         print("Conversation started.")
         print(context.chat_data)
 
-    def trade(self, update: Update, context: CallbackContext) -> int:
-        """Initiates trade sequence."""
-        context.chat_data.clear()
-        context.user_data.clear()
-
-        print(f'chat_data {context.chat_data}')
-
-        context.user_data['spaces_ids'] = Space().get_spaces()
-
-        spaces = list(context.user_data['spaces_ids'].keys())
-        reply_keyboard = [spaces]
-
-        update.message.reply_text(
-            'Please select a Space.',
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard, one_time_keyboard=True,
-            ),
-        )
-        return TradingBot.SPACE
-
     def quick_trade(self, update: Update, context: CallbackContext) -> int:
         """Initiates quick trade sequence."""
         context.chat_data.clear()
-        context.user_data['space_id_quicktrade'] = context.user_data['spaces_ids'].get(update.message.text)
 
         update.message.reply_text(
             'Please specify your quick trade in the following format: \'buy 5 apple stock\''
@@ -103,8 +82,7 @@ class TradingBot:
                 context.chat_data['order'] = Order().place_order(instrument['isin'],
                                                                  "p0d",
                                                                  quantity,
-                                                                 side,
-                                                                 context.user_data['space_id_quicktrade'])
+                                                                 side)
                 [context.chat_data['bid'], context.chat_data['ask']] = Instrument().get_price(instrument['isin'])
                 reply_keyboard = [['Confirm', 'Cancel']]
 
@@ -115,7 +93,7 @@ class TradingBot:
                     price = round(context.chat_data['bid'], 2)
 
                 update.message.reply_text(
-                    f'You indicated that you wish to {side} {quantity} {instrument.get("title")} {instrument_type} at €{price} per share. Is that '
+                    f'You indicated that you wish to {side} {quantity} {instrument.get("name")} {instrument_type} at €{price} per share. Is that '
                     f'correct?',
                     reply_markup=ReplyKeyboardMarkup(
                         reply_keyboard, one_time_keyboard=True,
@@ -150,7 +128,6 @@ class TradingBot:
                     order_summary = Order().get_order(
                         context.chat_data['order']['results'].get('id')
                     )
-                    # need to check here if the order is actually placed, so maybe check length of 'order'
                     if order_summary['results'].get('status') == 'executed':
                         context.chat_data['average_price'] = order_summary['results'].get('executed_price')
                         print('executed')
@@ -160,8 +137,8 @@ class TradingBot:
                             'We\'re currently experiencing some delays. Your order was not executed. Please try again '
                             'later. '
                         )
-                        # delete all inactive orders
-                        Order().delete_order(context.user_data['space_id_quicktrade'])
+                        # delete inactive order
+                        Order().delete_order(context.chat_data['order']['results'].get('id'))
                         return ConversationHandler.END
                     time.sleep(2)
 
@@ -185,9 +162,10 @@ class TradingBot:
                 "There was an error, ending conversation.")
             return ConversationHandler.END
 
-    def get_type(self, update: Update, context: CallbackContext) -> int:
+    def trade(self, update: Update, context: CallbackContext) -> int:
         """Retrieves financial instrument type."""
-        context.user_data['space_id'] = context.user_data['spaces_ids'].get(update.message.text)
+        context.chat_data.clear()
+        context.user_data.clear()
 
         reply_keyboard = [['Stock', 'ETF']]
 
@@ -220,7 +198,7 @@ class TradingBot:
         print(f'chat_data {context.chat_data}')
 
         try:
-            instruments = Instrument().get_titles(context.chat_data['search_query'],
+            instruments = Instrument().get_names(context.chat_data['search_query'],
                                                   context.chat_data['type'])
         except Exception as e:
             print(e)
@@ -228,10 +206,10 @@ class TradingBot:
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        titles = list(instruments.keys())
-        titles.append('Other')
+        names = list(instruments.keys())
+        names.append('Other')
 
-        reply_keyboard = [titles]
+        reply_keyboard = [names]
 
         update.message.reply_text(
             f'Please choose the instrument you wish to trade. If you do not see the desired instrument, press "Other".',
@@ -246,7 +224,7 @@ class TradingBot:
         text = update.message.text
 
         try:
-            instruments = Instrument().get_titles(context.chat_data['search_query'],
+            instruments = Instrument().get_names(context.chat_data['search_query'],
                                                   context.chat_data['type'])
         except Exception as e:
             print(e)
@@ -260,12 +238,12 @@ class TradingBot:
 
         # if user chooses name, find isin
         else:
-            context.chat_data['title'] = text
+            context.chat_data['name'] = text
             context.chat_data['isin'] = instruments.get(text)
 
             reply_keyboard = [['Buy', 'Sell']]
             update.message.reply_text(
-                f'Would you like to buy or sell {context.chat_data["title"]}?',
+                f'Would you like to buy or sell {context.chat_data["name"]}?',
                 reply_markup=ReplyKeyboardMarkup(
                     reply_keyboard, one_time_keyboard=True,
                 )
@@ -280,7 +258,7 @@ class TradingBot:
         context.chat_data['side'] = update.message.text.lower()
         try:
             [context.chat_data['bid'], context.chat_data['ask']] = Instrument().get_price(context.chat_data['isin'])
-            context.chat_data['balance'] = Space().get_balance(context.user_data['space_id'])
+            context.chat_data['balance'] = Account().get_balance()
         except Exception as e:
             print(e)
             update.message.reply_text(
@@ -296,15 +274,15 @@ class TradingBot:
             )
         # if user chooses sell, retrieve how many shares owned
         else:
-            positions = Portfolio().get_portfolio(context.user_data['space_id'])
+            positions = Positions().get_positions()
             print(positions)
             # initialise shares owned to 0
             context.chat_data['shares_owned'] = 0
 
             # if instrument in portfolio, update shares owned
-            if context.chat_data['isin'] in positions:
-                context.chat_data['shares_owned'] = \
-                    positions[context.chat_data['isin']][context.user_data['space_id']].get('quantity')
+            for position in positions:
+                if position['isin'] == context.chat_data['isin']:
+                    context.chat_data['shares_owned'] = position.get('quantity')
 
             update.message.reply_text(
                 f'This instrument can be sold for €{round(context.chat_data["bid"], 2)}, you currently own '
@@ -340,7 +318,7 @@ class TradingBot:
         # if buy and can't afford buy, prompt user to enter new amount
         if context.chat_data['side'] == 'buy' and context.chat_data['total'] > context.chat_data['balance'] / 10000:
             update.message.reply_text(
-                f'You do not have enough money to buy {context.chat_data["quantity"]} of {context.chat_data["title"]}. '
+                f'You do not have enough money to buy {context.chat_data["quantity"]} of {context.chat_data["name"]}. '
                 'Please enter a new amount.'
             )
             return TradingBot.SIDE
@@ -348,7 +326,7 @@ class TradingBot:
         # if sell and don't have that many shares, prompt user to enter new amount
         elif context.chat_data['side'] == 'sell' and context.chat_data['shares_owned'] < context.chat_data['quantity']:
             update.message.reply_text(
-                f'You do not have enough shares of {context.chat_data["title"]} in your portfolio. '
+                f'You do not have enough shares of {context.chat_data["name"]}. '
                 'Please enter a new amount.'
             )
             return TradingBot.SIDE
@@ -368,8 +346,7 @@ class TradingBot:
                         isin=context.chat_data['isin'],
                         expires_at="p0d",
                         side=context.chat_data['side'],
-                        quantity=context.chat_data['quantity'],
-                        space_id=context.user_data['space_id']
+                        quantity=context.chat_data['quantity']
                     ).get('results')['id']
             except Exception as e:
                 print(e)
@@ -379,7 +356,7 @@ class TradingBot:
 
             update.message.reply_text(
                 f'You\'ve indicated that you wish to {context.chat_data["side"]} {int(context.chat_data["quantity"])} '
-                f'share(s) of {context.chat_data["title"]} at a total of €{round(context.chat_data["total"], 2)}. '
+                f'share(s) of {context.chat_data["name"]} at a total of €{round(context.chat_data["total"], 2)}. '
                 f'Please confirm or cancel your order to continue.',
                 reply_markup=ReplyKeyboardMarkup(
                     reply_keyboard, one_time_keyboard=True,
@@ -479,37 +456,21 @@ class TradingBot:
             f'{meme_stock} to the moon 🚀'
         )
 
-    def get_space(self, update: Update, context: CallbackContext):
-        """Retrieves space for which to view portfolio."""
-
-        context.chat_data['spaces_ids'] = Space().get_spaces()
-        spaces = list(context.chat_data['spaces_ids'].keys())
-        reply_keyboard = [spaces]
-
-        update.message.reply_text(
-            'For which Space would you like to view your portfolio?',
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard, one_time_keyboard=True,
-            ),
-        )
-        return TradingBot.PORTFOLIO
-
-    def show_portfolio(self, update: Update, context: CallbackContext):
-        context.chat_data['space_id_portfolio'] = context.chat_data['spaces_ids'].get(update.message.text)
-
+    def show_positions(self, update: Update, context: CallbackContext):
         try:
-            portfolio = Portfolio().get_portfolio(context.chat_data['space_id_portfolio'])
-            print(portfolio)
+            positions = Positions().get_positions()
+            print(positions)
         except Exception as e:
             print(e)
             update.message.reply_text(
                 "There was an error, ending the conversation. If you'd like to try again, send /start.")
             return ConversationHandler.END
 
-        for isin, information in portfolio.items():
-            name = Instrument().get_title(isin)
-            quantity = information[context.chat_data["space_id_portfolio"]]["quantity"]
-            average_price = information[context.chat_data["space_id_portfolio"]]["buy_price_avg"]
+        for position in positions:
+            name = position.get("isin_title")
+            quantity = position.get("quantity")
+            average_price = position.get("buy_price_avg")
+
             if quantity != 0:
                 update.message.reply_text(
                     f'Name: {name}\n'

@@ -6,21 +6,23 @@ from helpers import RequestHandler
 
 class Instrument(RequestHandler):
 
-    def get_titles(self, search_query: str, instrument_type: str):
+    def get_names(self, search_query: str, instrument_type: str):
         mic = os.getenv("MIC")
         endpoint = f'instruments/?search={search_query}&type={instrument_type}&mic={mic}'
         response = self.get_data_market(endpoint)
         results = response['results']
+        print(results)
 
         instruments: dict = {}
 
         if len(results) <= 3:
             for result in results:
-                instruments[result['title']] = result['isin']
+                instruments[result['name']] = result['isin']
         else:
             for result in results[:4]:
-                instruments[result['title']] = result['isin']
+                instruments[result['name']] = result['isin']
 
+        print(instruments)
         return instruments
 
     def get_title(self, isin: str):
