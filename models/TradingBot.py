@@ -86,10 +86,10 @@ class TradingBot:
                     instrument_type = trade_elements[3].lower()
 
                 instrument_list = client.market_data.instruments.get(search=search, type=instrument_type).results
+                instrument = instrument_list[0]
                 if len(instrument_list) == 0:
                     print('Instrument not found, please be more specific. Send /start to try again.')
-                else:
-                    instrument = client.market_data.instruments.get(search=search, type=instrument_type).results[0]
+                    
                 order = client.trading.orders.create(isin=instrument.isin,
                                                      expires_at=0,
                                                      quantity=quantity,
@@ -125,7 +125,7 @@ class TradingBot:
         """Activates quicktrade order."""
         reply = update.message.text
         if reply == 'Confirm':
-            if context.chat_data['order_status'] == 'error':
+            if context.chat_data['order_status'] == 'rejected':
                 update.message.reply_text(
                     "Insufficient holdings, ending conversation"
                 )
