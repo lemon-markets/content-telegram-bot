@@ -86,10 +86,14 @@ class TradingBot:
                     instrument_type = trade_elements[3].lower()
 
                 instrument_list = client.market_data.instruments.get(search=search, type=instrument_type).results
-                instrument = instrument_list[0]
+                print(instrument_list)
+
+                # in case user searches for stock that is not offered, return a prompt to start and end the convo
                 if len(instrument_list) == 0:
-                    print('Instrument not found, please be more specific. Send /start to try again.')
-                    
+                    update.message.reply_text("Instrument not found, please be more specific. Use /start to try again.")
+                    return ConversationHandler.END
+
+                instrument = instrument_list[0]
                 order = client.trading.orders.create(isin=instrument.isin,
                                                      expires_at=0,
                                                      quantity=quantity,
@@ -107,8 +111,8 @@ class TradingBot:
                     price = context.chat_data['bid']
 
                 update.message.reply_text(
-                    f'You indicated that you wish to {side} {quantity} {instrument.name} {instrument_type} at €{price} per share. Is that '
-                    f'correct?',
+                    f'You indicated that you wish to {side} {quantity} {instrument.name} {instrument_type} at €{price} '
+                    f'per share. Is that correct?',
                     reply_markup=ReplyKeyboardMarkup(
                         reply_keyboard, one_time_keyboard=True,
                     ),
@@ -132,7 +136,7 @@ class TradingBot:
                 return ConversationHandler.END
             try:
                 print(context.chat_data)
-                order_id = client.trading.orders.activate(context.chat_data['order_id'])
+                activate_order = client.trading.orders.activate(context.chat_data['order_id'])
                 update.message.reply_text(
                     "Please wait while we process your order."
                 )
@@ -475,7 +479,7 @@ class TradingBot:
             f'{meme_stock} to the moon 🚀'
         )
 
-    def show_positions(self, update: Update, context: CallbackContext):
+    def show_positions(self, update: Update):
         try:
             positions = client.trading.positions.get().results
             print(positions)
