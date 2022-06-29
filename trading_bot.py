@@ -32,12 +32,12 @@ class TradingBot:
         # collect user's name
         user = update.message.from_user.name
 
-        preferred_venue = client.market_data.venues.get(os.getenv('MIC')).results[0]
+        venue = client.market_data.venues.get(os.getenv('MIC')).results[0].is_open
 
         # if Trading Venue closed, indicate next opening time and end conversation
-        if not preferred_venue.is_open:
-            opening_date: str = preferred_venue.opening_days[0].strftime('%d/%m/%Y')
-            opening_time: str = preferred_venue.opening_hours.start.strftime('%H:%m')
+        if not venue.is_open:
+            opening_date: str = venue.opening_days[0].strftime('%d/%m/%Y')
+            opening_time: str = venue.opening_hours.start.strftime('%H:%m')
             update.message.reply_text(
                 f'This exchange is closed at the moment. Please try again on {opening_date} at {opening_time}.'
             )
@@ -86,7 +86,7 @@ class TradingBot:
                     instrument_type = trade_elements[3].lower()
 
                 instrument_list = client.market_data.instruments.get(search=search, type=instrument_type).results
-                print(instrument_list)
+                print(f"Search of {search} gave instruments: {instrument_list}")
 
                 # in case user searches for stock that is not offered, return a prompt to start and end the convo
                 if len(instrument_list) == 0:
@@ -148,7 +148,7 @@ class TradingBot:
                     )
                     if order_summary.results.status == 'executed':
                         context.chat_data['average_price'] = order_summary.results.executed_price
-                        print('executed')
+                        print('Quick-trade executed.')
                         break
                     elif datetime.datetime.now() - start >= datetime.timedelta(minutes=3):
                         update.message.reply_text(
@@ -294,7 +294,7 @@ class TradingBot:
         # if user chooses sell, retrieve how many shares owned
         else:
             positions = client.trading.positions.get(context.chat_data['isin'])
-            print(positions)
+            print(f"Your positions are: {positions}")
 
             # initialise shares owned to 0
             context.chat_data['shares_owned'] = 0
@@ -417,7 +417,7 @@ class TradingBot:
                     context.chat_data['order_id'],
                 )
                 if order_summary.results.status == 'executed':
-                    print('executed')
+                    print('Trade executed.')
                     break
                 time.sleep(2)
 
@@ -482,7 +482,7 @@ class TradingBot:
     def show_positions(self, update: Update):
         try:
             positions = client.trading.positions.get().results
-            print(positions)
+            print(f" Your positions are: {positions}")
         except Exception as e:
             print(e)
             update.message.reply_text(

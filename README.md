@@ -15,15 +15,16 @@ If you'd like a step-by-step tutorial on this project, check out our YouTube vid
 ## 🛠️ Getting Set-Up
 
 
-This repository requires the creation of an `.env` file with the following variables to communicate with the lemon.markets API:
+This repository requires the creation of an `.env` file with the following variables to communicate with the lemon.markets API 
+and the Telegram API:
 
 | ENV Variable |               Explanation               |  
 |--------------|:---------------------------------------:|
 | DATA_API_KEY |        Your market data API key         |
  | TRADING_API_KEY |    Your paper/money trading API key     |
 | MIC          | Market Identifier Code of Trading Venue |
+ | BOT_TOKEN |         Your Telegram bot token         |
 
-It also needs a `BOT_TOKEN` to communicate with the Telegram API.
 
 ### 🍋 lemon.markets
 

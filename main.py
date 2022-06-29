@@ -2,7 +2,7 @@ import logging
 import os
 from dotenv import load_dotenv
 
-from models.TradingBot import TradingBot
+from trading_bot import TradingBot
 
 from telegram.ext import (
     Updater,
@@ -49,7 +49,8 @@ def main() -> None:
     quick_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('quicktrade', TradingBot().quick_trade)],
         states={
-            TradingBot.QUICKTRADE: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().perform_quicktrade)],
+            TradingBot.QUICKTRADE: [
+                MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().perform_quicktrade)],
             TradingBot.QUICK: [MessageHandler(Filters.text & ~Filters.regex('^/'), TradingBot().confirm_quicktrade)],
         },
         fallbacks=[CommandHandler('cancel', TradingBot().cancel)]
@@ -63,7 +64,6 @@ def main() -> None:
     dispatcher.add_handler(moon_handler)
     dispatcher.add_handler(positions_handler)
     dispatcher.add_handler(quick_conv_handler)
-
 
     # Start the Bot
     updater.start_polling()
